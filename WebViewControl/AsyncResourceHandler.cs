@@ -7,6 +7,13 @@ namespace WebViewControl {
 
     internal class AsyncResourceHandler : DefaultResourceHandler {
 
+        private class InternalTextStream : MemoryStream {
+
+            public InternalTextStream(int capacity) : base(capacity) { }
+
+            public InternalTextStream(byte[] buffer) : base(buffer) { }
+        }
+
         private CefCallback responseCallback;
         private bool autoDisposeStream;
 
@@ -15,6 +22,7 @@ namespace WebViewControl {
                 responseCallback = callback;
                 return RequestHandlingFashion.ContinueAsync;
             }
+            WrapResponseStream();
             return RequestHandlingFashion.Continue;
         }
 
@@ -36,6 +44,7 @@ namespace WebViewControl {
         public void Continue() {
             if (responseCallback != null) {
                 using (responseCallback) {
+                    WrapResponseStream();
                     responseCallback.Continue();
                 }
             }
@@ -52,7 +61,7 @@ namespace WebViewControl {
                 var preamble = encoding.GetPreamble();
                 var bytes = encoding.GetBytes(text);
 
-                var memoryStream = new MemoryStream(preamble.Length + bytes.Length);
+                var memoryStream = new InternalTextStream(preamble.Length + bytes.Length);
 
                 memoryStream.Write(preamble, 0, preamble.Length);
                 memoryStream.Write(bytes, 0, bytes.Length);
@@ -62,7 +71,25 @@ namespace WebViewControl {
                 return memoryStream;
             }
 
-            return new MemoryStream(encoding.GetBytes(text));
+            return new InternalTextStream(encoding.GetBytes(text));
+        }
+
+        private void WrapResponseStream() {
+            //if (Response == null || Response is InternalTextStream) {
+            //    return;
+            //}
+
+            //var streamCopy = new MemoryStream();
+            //lock (Response) {
+            //    Response.Position = 0;
+            //    Response.CopyTo(streamCopy);
+            //}
+            
+            //if (autoDisposeStream) {
+            //    Response.Dispose();
+            //}
+
+            //Response = streamCopy;
         }
 
         protected override void Dispose(bool disposing) {

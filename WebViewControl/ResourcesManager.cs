@@ -46,7 +46,18 @@ namespace WebViewControl {
             if (failOnMissingResource && stream == null) {
                 throw new InvalidOperationException("Resource not found: " + resourceName);
             }
-            return stream;
+
+            if (stream != null) {
+                var streamCopy = new MemoryStream();
+                lock (typeof(ResourcesManager)) {
+                    stream.Position = 0;
+                    stream.CopyTo(streamCopy);
+                    stream = streamCopy;
+                    stream.Position = 0;
+                }
+            }
+
+            return stream; // != null ? Stream.Synchronized(stream) : null;
         }
 
         public static Stream GetResourceWithFullPath(Assembly assembly, IEnumerable<string> resourcePath) {
